@@ -1,0 +1,21 @@
+{
+    "name": "johnreeve/gateway",
+    "authors": [
+        {
+            "name": "John Reeve",
+            "email": "John.reeve.media@gmail.com"
+        }
+    ],
+    "require": {
+        "php": ">=5.3.3"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "3.7.*"
+    },
+    "config": {
+        "bin-dir": "bin"
+    },
+    "autoload": {
+        "psr-0": {"GenericGateway": "lib/"}
+    }
+}
