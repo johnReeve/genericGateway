@@ -28,19 +28,22 @@ class AuthorizeNET implements Gateway {
 
 		$amount = floatval($amount);
 
-		$testing = $options['testing']  ? $options['testing'] : false;
-		$prefill = $options['prefill']  ? $options['prefill'] : false;
+		$testing      = $options['testing']  ? $options['testing'] : false;
+		$prefill      = $options['prefill']  ? $options['prefill'] : false;
+		$hiddenFields =  $this->generateHiddenFields($options['hidden_fields']);
 
 		return $this->cardForm(
 			$amount,
 			$transactionID,
+			$visibleFields,
+			$hiddenFields,
 			$testing,
 			$prefill
 		);
 
 	}
 
-	private function cardForm($amount, $transactionID, $test_mode = true, $prefill = true) {
+	private function cardForm($amount, $transactionID, $hiddenFields, $test_mode = true, $prefill = true) {
 
 		$time = time();
 		$fp = self::getFingerprint($this->api_login_id, $this->transaction_key, $amount, $transactionID, $time);
@@ -52,13 +55,17 @@ class AuthorizeNET implements Gateway {
 			<input type='hidden' name='x_delim_data' value='TRUE'>
 			<input type='hidden' name='x_fp_hash' value='$fp'>
 			<input type='hidden' name='x_fp_sequence' value='$transactionID'>
+			<input type='hidden' name='x_invoice_num' value='$transactionID'>
 			<input type='hidden' name='x_fp_timestamp' value='$time'>
 			<input type='hidden' name='x_login' value='$this->api_login_id'>
 			<input type='hidden' name='x_relay_response' value='TRUE'>
 			<input type='hidden' name='x_relay_url' value='$this->relay_url'>
 			<input type='hidden' name='x_version' value='3.1'>
-			<input type='hidden' name='x_delim_char' value=','>" .
-            '<fieldset>
+			<input type='hidden' name='x_delim_char' value=','>
+			$hiddenFields
+			" .
+            '
+            <fieldset>
                 <div>
                     <label>Credit Card Number</label>
                     <input type="text" class="text" size="15" name="x_card_num" value="'.($prefill ? '6011000000000012' : '').'"></input>
@@ -161,6 +168,17 @@ class AuthorizeNET implements Gateway {
                 </head><body><noscript><meta http-equiv=\"refresh\" content=\"1;url={$redirect_url}\"></noscript></body></html>";
 	}
 
+	// generates a set of hidden fields based on an array:
+	private function generateHiddenFields ($fields) {
+		// return an empty string if its anything other than an array
+		$output = "";
+		if (!is_array($fields)) return $output;
+
+		foreach ($fields as $name => $value) {
+			$output .= "<input type='hidden' name='$name' value='$value'>";
+		}
+		return $output;
+	}
 
 
 }
