@@ -2,21 +2,31 @@
 
 namespace GenericGateway;
 
+/**
+ * Class AuthorizeNETResponse
+ *
+ * @package GenericGateway
+ */
+
 class AuthorizeNETResponse extends Response {
 
+	/**
+	 * These are the codes Authorize.net uses to classify the transaction
+	 */
 	const APPROVED = 1;
 	const DECLINED = 2;
 	const ERROR = 3;
 	const HELD = 4;
 
 	/**
-	 * Constructor.
+	 *
+	 * Either constructor argument can be omitted if there are globals set for
+	 * AUTHORIZENET_API_LOGIN_ID and AUTHORIZENET_MD5_SETTING
 	 *
 	 * @param string $api_login_id
-	 * @param string $md5_setting For verifying an Authorize.Net message.
+	 * @param string $md5_setting for verifying an Authorize.Net message.
 	 */
-	public function __construct($api_login_id = false, $md5_setting = false)
-	{
+	public function __construct($api_login_id = false, $md5_setting = false) {
 		$this->api_login_id = ($api_login_id ? $api_login_id : (defined('AUTHORIZENET_API_LOGIN_ID') ? AUTHORIZENET_API_LOGIN_ID : ""));
 		$this->md5_setting = ($md5_setting ? $md5_setting : (defined('AUTHORIZENET_MD5_SETTING') ? AUTHORIZENET_MD5_SETTING : ""));
 		$this->response = $_POST;
@@ -54,12 +64,11 @@ class AuthorizeNETResponse extends Response {
 	}
 
 	/**
-	 * Verify the request is AuthorizeNet.
+	 * Verify the request hash.
 	 *
 	 * @return bool
 	 */
-	public function isCorrectGateway()
-	{
+	public function isGateway() {
 		return count($_POST) && $this->md5_hash && ($this->generateHash() == $this->md5_hash);
 	}
 
@@ -68,8 +77,7 @@ class AuthorizeNETResponse extends Response {
 	 *
 	 * @return string Hash
 	 */
-	public function generateHash()
-	{
+	public function generateHash() {
 		$amount = ($this->amount ? $this->amount : "0.00");
 		return strtoupper(md5($this->md5_setting . $this->api_login_id . $this->transaction_id . $amount));
 	}

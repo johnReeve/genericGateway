@@ -2,6 +2,15 @@
 
 namespace GenericGateway;
 
+/**
+ * Class Response
+ *
+ * This is the abstract response object for a gateway transaction
+ *
+ * @package GenericGateway
+ *
+ */
+
 abstract class Response {
     
     // For ARB transactions

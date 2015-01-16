@@ -15,108 +15,142 @@ class AuthorizeNET implements Gateway {
 	public $transaction_key = "";
 	public $md5_setting = "";
 
-	public function __construct ($credentials) {
-
-		$this->api_login_id = $credentials['api_login'];
-		$this->transaction_key = $credentials['transaction_key'];
-		$this->md5_setting = $credentials['md5_setting'];
-		$this->relay_url = $credentials['relay_url'];
-
-	}
-
-	public function getCreditCardForm ($amount, $transactionID, $options) {
-
-		$amount = floatval($amount);
-
-		$testing      = $options['testing']  ? $options['testing'] : false;
-		$prefill      = $options['prefill']  ? $options['prefill'] : false;
-		$hiddenFields =  $this->generateHiddenFields($options['hidden_fields']);
-
-		return $this->cardForm(
-			$amount,
-			$transactionID,
-			$visibleFields,
-			$hiddenFields,
-			$testing,
-			$prefill
-		);
-
-	}
-
-	private function cardForm($amount, $transactionID, $hiddenFields, $test_mode = true, $prefill = true) {
-
-		$time = time();
-		$fp = self::getFingerprint($this->api_login_id, $this->transaction_key, $amount, $transactionID, $time);
-		$post_url = ($test_mode ? self::SANDBOX_URL : self::LIVE_URL);
-
-		$form = "
-        <form method='post' action='$post_url'>
-			<input type='hidden' name='x_amount' value='$amount'>
+	private $defaultFormMarkup = "
+		<form method='post' action='<% post_url %>'>
+			<input type='hidden' name='x_amount' value='<% amount %>'>
 			<input type='hidden' name='x_delim_data' value='TRUE'>
-			<input type='hidden' name='x_fp_hash' value='$fp'>
-			<input type='hidden' name='x_fp_sequence' value='$transactionID'>
-			<input type='hidden' name='x_invoice_num' value='$transactionID'>
-			<input type='hidden' name='x_fp_timestamp' value='$time'>
-			<input type='hidden' name='x_login' value='$this->api_login_id'>
+			<input type='hidden' name='x_fp_hash' value='<% fp %>'>
+			<input type='hidden' name='x_fp_sequence' value='<% transaction_id %>'>
+			<input type='hidden' name='x_invoice_num' value='<% transaction_id %>'>
+			<input type='hidden' name='x_fp_timestamp' value='<% time %>'>
+			<input type='hidden' name='x_login' value='<% api_login_id %>'>
 			<input type='hidden' name='x_relay_response' value='TRUE'>
-			<input type='hidden' name='x_relay_url' value='$this->relay_url'>
+			<input type='hidden' name='x_relay_url' value='<% relay_url %>'>
 			<input type='hidden' name='x_version' value='3.1'>
 			<input type='hidden' name='x_delim_char' value=','>
-			$hiddenFields
-			" .
-            '
-            <fieldset>
+			<fieldset>
                 <div>
                     <label>Credit Card Number</label>
-                    <input type="text" class="text" size="15" name="x_card_num" value="'.($prefill ? '6011000000000012' : '').'"></input>
+                    <input type='text' class='text' size='15' name='x_card_num' value='<% x_card_num %>'>
                 </div>
                 <div>
                     <label>Exp.</label>
-                    <input type="text" class="text" size="4" name="x_exp_date" value="'.($prefill ? '04/17' : '').'"></input>
+                    <input type='text' class='text' size='4' name='x_exp_date' value='<% x_exp_date %>'>
                 </div>
                 <div>
                     <label>CCV</label>
-                    <input type="text" class="text" size="4" name="x_card_code" value="'.($prefill ? '782' : '').'"></input>
+                    <input type='text' class='text' size='4' name='x_card_code' value='<% x_card_code %>'>
                 </div>
             </fieldset>
             <fieldset>
                 <div>
                     <label>First Name</label>
-                    <input type="text" class="text" size="15" name="x_first_name" value="'.($prefill ? 'John' : '').'"></input>
+                    <input type='text' class='text' size='15' name='x_first_name' value='<% x_first_name %>'>
                 </div>
                 <div>
                     <label>Last Name</label>
-                    <input type="text" class="text" size="14" name="x_last_name" value="'.($prefill ? 'Doe' : '').'"></input>
+                    <input type='text' class='text' size='14' name='x_last_name' value='<% x_last_name %>'>
                 </div>
             </fieldset>
             <fieldset>
                 <div>
                     <label>Address</label>
-                    <input type="text" class="text" size="26" name="x_address" value="'.($prefill ? '123 Main Street' : '').'"></input>
+                    <input type='text' class='text' size='26' name='x_address' value='<% x_address %>'>
                 </div>
                 <div>
                     <label>City</label>
-                    <input type="text" class="text" size="15" name="x_city" value="'.($prefill ? 'Boston' : '').'"></input>
+                    <input type='text' class='text' size='15' name='x_city' value='<% x_city %>'>
                 </div>
             </fieldset>
             <fieldset>
                 <div>
                     <label>State</label>
-                    <input type="text" class="text" size="4" name="x_state" value="'.($prefill ? 'MA' : '').'"></input>
+                    <input type='text' class='text' size='4' name='x_state' value='<% x_state %>'>
                 </div>
                 <div>
                     <label>Zip Code</label>
-                    <input type="text" class="text" size="9" name="x_zip" value="'.($prefill ? '02142' : '').'"></input>
+                    <input type='text' class='text' size='9' name='x_zip' value='<% x_zip %>'>
                 </div>
                 <div>
                     <label>Country</label>
-                    <input type="text" class="text" size="22" name="x_country" value="'.($prefill ? 'US' : '').'"></input>
+                    <input type='text' class='text' size='22' name='x_country' value='<% x_country %>'>
                 </div>
             </fieldset>
-            <input type="submit" value="BUY" class="submit buy">
-        </form>';
-		return $form;
+            <input type='submit' value='BUY' class='submit buy'>
+		</form>
+	";
+
+	/**
+	 * @param array $credentials - holds api keys and whatnot
+	 * @param array $options - holds information for constructing the Gateway
+	 */
+	public function __construct ($credentials = array(), $options= array()) {
+
+		$this->api_login_id = $credentials['api_login'];
+		$this->transaction_key = $credentials['transaction_key'];
+		$this->md5_setting = $credentials['md5_setting'];
+		$this->relay_url = $options['relay_url'];
+
 	}
+
+	/**
+	 * returns the markup for the form
+	 *
+	 * @param $amount - the amount of the transaction
+	 * @param $transactionID - an id for the transaction
+	 * @param $options
+	 *
+	 * @return string - the necessary markup for the form
+	 */
+	public function getPaymentFormMarkup ($amount, $transactionID, $options, $templateString = "") {
+
+		$templateString = $templateString ? $templateString : $this->defaultFormMarkup;
+
+		return  $this->stringFromTemplate(
+			$templateString,
+			$this->getPaymentFormFieldArray($amount, $transactionID, $options)
+		);
+	}
+
+	/**
+	 * returns an array of fields and keys for a form
+	 * @param $amount
+	 * @param $transactionID
+	 * @param $options
+	 *
+	 * @return array
+	 */
+	public function getPaymentFormFieldArray ($amount, $transactionID, $options) {
+
+		$testing      = $options['testing']  ? $options['testing'] : false;
+		$time = time();
+
+		$formValueArray = array();
+		$formValueArray['post_url'] =  ($testing ? self::SANDBOX_URL : self::LIVE_URL);
+		$formValueArray['time'] = $time;
+		$formValueArray['amount'] = floatval($amount);
+		$formValueArray['fp'] = self::getFingerprint($this->api_login_id, $this->transaction_key, $amount, $transactionID, $time);
+		$formValueArray['transaction_id'] = $transactionID;
+		$formValueArray['api_login_id'] = $this->api_login_id;
+		$formValueArray['relay_url'] = $this->relay_url;
+
+		// it is nice to be able to prefill stuff when we are testing:
+		if ($options['prefill']) {
+			$formValueArray["x_card_num"] = '6011000000000012';
+			$formValueArray["x_exp_date"] = '04/17';
+			$formValueArray["x_card_code"] = '782';
+			$formValueArray["x_first_name"] = 'John';
+			$formValueArray["x_last_name"] = 'Doe';
+			$formValueArray["x_address"] = '123 Main Street';
+			$formValueArray["x_city"] = 'Boston';
+			$formValueArray["x_state"] = 'MA';
+			$formValueArray["x_zip"] = '02142';
+			$formValueArray["x_country"] = 'US';
+		}
+
+		return $formValueArray;
+	}
+
 
 	/**
 	 * Generates a fingerprint needed for a hosted order form or DPM.
@@ -139,17 +173,16 @@ class AuthorizeNET implements Gateway {
 		return bin2hex(mhash(MHASH_MD5, $api_login_id . "^" . $fp_sequence . "^" . $fp_timestamp . "^" . $amount . "^", $transaction_key));
 	}
 
-
-	// returns a general gateway response object based on the request
-	// this object can be used to validate the transaction
-	// wraps AuthorizeNetSIM
+	/**
+	 * Creates and returns a response objectto be used by the transaction
+	 *
+	 * @return AuthorizeNETResponse
+	 */
 	public function getResponse () {
 		return new AuthorizeNETResponse();
 	}
 
-	// returns a response snippet to redirect appropriately
-	// this is sent to Authorize and will be used to return the user to the site
-	// wraps AuthorizeNetDPM::getRelayResponseSnippet
+
 	/**
 	 * A snippet to send to AuthorizeNet to redirect the user back to the
 	 * merchant's server. Use this on your relay response page.
@@ -168,17 +201,23 @@ class AuthorizeNET implements Gateway {
                 </head><body><noscript><meta http-equiv=\"refresh\" content=\"1;url={$redirect_url}\"></noscript></body></html>";
 	}
 
-	// generates a set of hidden fields based on an array:
-	private function generateHiddenFields ($fields) {
-		// return an empty string if its anything other than an array
-		$output = "";
-		if (!is_array($fields)) return $output;
-
-		foreach ($fields as $name => $value) {
-			$output .= "<input type='hidden' name='$name' value='$value'>";
+	/**
+	 * This is a super-simple template parser that allows us to generate the form a little more flexibly
+	 *
+	 * @param string $templateString should contain tags of the form <% array_key %> that are replaced
+	 * @param array $formElementArray the key:value hash that will fill out the form
+	 *
+	 * @return mixed|string
+	 */
+	private function stringFromTemplate ($templateString = "", $formElementArray = array() ) {
+		$output = $templateString;
+		foreach ($formElementArray as $formElementName => $formElementVal ) {
+			$output = str_replace("<% $formElementName %>", $formElementVal , $output);
 		}
+		// remove any unfilled tags
+		$output = preg_replace("/<%(.*?)%>/", "", $output);
+
 		return $output;
 	}
-
 
 }

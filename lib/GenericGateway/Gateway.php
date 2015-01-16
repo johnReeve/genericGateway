@@ -4,10 +4,18 @@ namespace GenericGateway;
 
 interface Gateway {
 
-	// returns markup for a payment form
-	// this will be output on the payment page
-	// wrapper for AuthorizeNetDPM::getCreditCardForm
-	public function getCreditCardForm ($amount, $transactionID, $options);
+	/**
+	 * @param $amount
+	 * @param $transactionID
+	 * @param $options
+	 *
+	 * @return string - markup for the payment form
+	 */
+
+	public function getPaymentFormMarkup ($amount, $transactionID, $options);
+
+	public function getPaymentFormFieldArray ($amount, $transactionID, $options);
+
 
 	// returns a general gateway response object based on the request
 	// this object can be used to validate the transaction
